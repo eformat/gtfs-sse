@@ -1,14 +1,14 @@
 {
    "type": "record",
-   "name": "price",
+   "name": "gtfs",
    "namespace": "com.redhat",
    "fields": [
        {
-           "name": "symbol",
-           "type": "string"
+           "name": "time",
+           "type": "long"
        },
        {
-           "name": "price",
+           "name": "data",
            "type": "string"
        }
    ]

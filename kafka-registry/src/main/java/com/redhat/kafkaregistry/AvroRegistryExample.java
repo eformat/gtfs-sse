@@ -1,13 +1,17 @@
 package com.redhat.kafkaregistry;
 
+import com.google.common.io.ByteStreams;
+import com.google.transit.realtime.GtfsRealtime;
 import io.reactivex.Flowable;
 import org.apache.avro.Schema;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.GenericData.Record;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Outgoing;
-import org.jboss.resteasy.annotations.SseElementType;
 import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -17,50 +21,79 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
-import java.util.Random;
+import java.io.InputStream;
+import java.util.GregorianCalendar;
 import java.util.concurrent.TimeUnit;
 
 @ApplicationScoped
-@Path("/prices")
+@Path("/gtfs")
 public class AvroRegistryExample {
 
-    private Random random = new Random();
-    private String[] symbols = new String[]{"RHT", "IBM", "MSFT", "AMZN"};
+    private static final Logger log = LoggerFactory.getLogger(AvroRegistryExample.class);
 
-    /**
-     * Generate price data
-     * @return
-     * @throws IOException
-     */
-    private Record generatePrice() throws IOException {
-        Schema schema = new Schema.Parser().parse(
-                new File(getClass().getClassLoader().getResource("price-schema.avsc").getFile())
-        );
-        Record record = new GenericData.Record(schema);
-        record.put("symbol", symbols[random.nextInt(4)]);
-        record.put("price", String.format("%.2f", random.nextDouble() * 100));
+    @Inject
+    VehicleService vehicleService;
+
+    @ConfigProperty(name = "gtfs.url", defaultValue = "https://gtfsrt.api.translink.com.au/Feed/SEQ")
+    public String optUrl;
+
+    @ConfigProperty(name = "gtfs.feed", defaultValue = "bne-bus")
+    public String optFeed;
+
+    final String optApiKey = "";
+
+    private Record readGtfs() {
+        GtfsRealtime.FeedMessage msg = null;
+        byte[] gtfs;
+        Record record = null;
+        try (InputStream in = GetGtfs.feedUrlStream(optApiKey, optFeed, optUrl)) {
+            gtfs = ByteStreams.toByteArray(in);
+            msg = GtfsRealtime.FeedMessage.parseFrom(gtfs);
+
+            long timestamp;
+            if (msg != null && msg.hasHeader() && msg.getHeader().hasTimestamp()) {
+                timestamp = msg.getHeader().getTimestamp();
+            } else {
+                timestamp = new GregorianCalendar().getTimeInMillis();
+            }
+            Schema schema = new Schema.Parser().parse(
+                    new File(getClass().getClassLoader().getResource("gtfs-schema.avsc").getFile())
+            );
+
+            String vehiclesAsJsonString = vehicleService.getVehiclesAsString(msg);
+
+            record = new GenericData.Record(schema);
+            record.put("time", timestamp);
+            record.put("data", vehiclesAsJsonString);
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
         return record;
     }
 
     /**
-     * Send prices to kafka topic
+     * Send gtfs data to kafka topic
+     *
      * @return
      * @throws IOException
      */
-    @Outgoing("price-out")
+    @Outgoing("gtfs-out")
     public Flowable<Record> generate() throws IOException {
-        return Flowable.interval(1000, TimeUnit.MILLISECONDS)
+        return Flowable.interval(5000, TimeUnit.MILLISECONDS)
                 .onBackpressureDrop()
                 .map(tick -> {
-                    return generatePrice();
+                    return readGtfs();
                 });
     }
 
     @Inject
-    @Channel("price-in") Publisher<Record> prices;
+    @Channel("gtfs-in")
+    Publisher<Record> rawData;
 
     /**
      * Read kafka topic and send as SSE
+     *
      * @return
      */
     @GET
@@ -68,6 +101,7 @@ public class AvroRegistryExample {
     @Produces(MediaType.SERVER_SENT_EVENTS)
     //@SseElementType(MediaType.APPLICATION_JSON) //avro/binary
     public Publisher<Record> stream() {
-        return prices;
+        return rawData;
     }
+
 }

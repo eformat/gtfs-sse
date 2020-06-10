@@ -9,12 +9,14 @@ https://developers.redhat.com/blog/2019/12/17/replacing-confluent-schema-registr
 
 ```bash
 podman-compose up
-curl -X POST -H "Content-type: application/json; artifactType=AVRO" -H "X-Registry-ArtifactId: prices-value" --data '{"type":"record","name":"price","namespace":"com.redhat","fields":[{"name":"symbol","type":"string"},{"name":"price","type":"string"}]}' http://localhost:8081/api/artifacts -s | jq
 
 cd kafka-registry
 mvn compile quarkus:dev
 
 kafkacat -b localhost:9092 -C -o end -q -u -t prices
+
+
+/opt/kafka_2.12-2.2.0/bin/kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic prices
 ```
 
 browse registry
