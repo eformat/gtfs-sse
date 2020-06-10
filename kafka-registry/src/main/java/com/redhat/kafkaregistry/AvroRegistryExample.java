@@ -42,6 +42,9 @@ public class AvroRegistryExample {
 
     final String optApiKey = "";
 
+    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "5")
+    public int pollValue;
+
     private Record readGtfs() {
         GtfsRealtime.FeedMessage msg = null;
         byte[] gtfs;
@@ -80,7 +83,7 @@ public class AvroRegistryExample {
      */
     @Outgoing("gtfs-out")
     public Flowable<Record> generate() throws IOException {
-        return Flowable.interval(5000, TimeUnit.MILLISECONDS)
+        return Flowable.interval(pollValue, TimeUnit.SECONDS)
                 .onBackpressureDrop()
                 .map(tick -> {
                     return readGtfs();
