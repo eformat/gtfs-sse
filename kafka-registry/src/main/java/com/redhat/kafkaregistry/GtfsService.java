@@ -27,9 +27,9 @@ import java.util.concurrent.TimeUnit;
 
 @ApplicationScoped
 @Path("/gtfs")
-public class AvroRegistryExample {
+public class GtfsService {
 
-    private static final Logger log = LoggerFactory.getLogger(AvroRegistryExample.class);
+    private static final Logger log = LoggerFactory.getLogger(GtfsService.class);
 
     @Inject
     VehicleService vehicleService;

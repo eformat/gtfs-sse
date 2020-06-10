@@ -1,22 +1,22 @@
-# registry-example-avro
+# gtfs bus positions into kafka+sse
 
-Apicurio Schema Registry
-
-https://developers.redhat.com/blog/2019/12/16/getting-started-with-red-hat-integration-service-registry/
-https://access.redhat.com/documentation/en-us/red_hat_integration/2020-04/html-single/getting_started_with_service_registry/index#installing-registry-kafka-kubernetes-storage
-https://debezium.io/blog/2020/04/09/using-debezium-wit-apicurio-api-schema-registry/
-https://developers.redhat.com/blog/2019/12/17/replacing-confluent-schema-registry-with-red-hat-integration-service-registry/
-
+Using avro and schema registry
 ```bash
+# run infra locally
 podman-compose up
 
+# compile
 cd kafka-registry
 mvn compile quarkus:dev
 
-kafkacat -b localhost:9092 -C -o end -q -u -t prices
+# browse topic
+kafkacat -b localhost:9092 -C -o end -q -u -t gtfs
 
+# sse
+http http://localhost:8080/gtfs/stream --stream
 
-/opt/kafka_2.12-2.2.0/bin/kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic prices
+# delete topic
+/opt/kafka_2.12-2.2.0/bin/kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic gtfs
 ```
 
 browse registry
