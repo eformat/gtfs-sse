@@ -16,6 +16,8 @@ Requires:
 - podman-compose (or docker-compose)
 - jdk11, maven 3.6+
 
+![gfts-exp](images/gtfs-exp.png)
+
 ![sql-bne-435](images/bne-435.png)
 
 Run demo
@@ -44,13 +46,14 @@ TimelyDataFlow using materialize.io
 ```
 # psql -h localhost -p 6875 materialize
 
+# create kafka source
 CREATE SOURCE gtfs
 FROM KAFKA BROKER 'localhost:9092' TOPIC 'gtfs'
 FORMAT TEXT;
 
 SHOW COLUMNS FROM gtfs;
-DROP SOURCE gtfs;
 
+# materialize all data
 CREATE MATERIALIZED VIEW all_gtfs AS
     SELECT (text::JSONB)->'id' as id,
            (text::JSONB)->'label' as label,
@@ -62,8 +65,7 @@ CREATE MATERIALIZED VIEW all_gtfs AS
 SELECT * from all_gtfs;
 SHOW COLUMNS FROM all_gtfs;
 
-DROP VIEW all_gtfs;
-
+# materalize only the 435 bus
 CREATE MATERIALIZED VIEW BUS435 AS
     SELECT id, label, CAST(lastUpdate AS float), CAST(lat as float), CAST(lon as float)
     FROM all_gtfs
@@ -72,7 +74,10 @@ CREATE MATERIALIZED VIEW BUS435 AS
 SELECT * from BUS435;
 SHOW COLUMNS FROM BUS435;
 
+# clean up if required
 DROP VIEW BUS435;
+DROP VIEW all_gtfs;
+DROP SOURCE gtfs;
 ```
 
 Apicurio schema registry
