@@ -1,7 +1,7 @@
 {
    "type": "record",
    "name": "gtfs",
-   "namespace": "com.redhat",
+   "namespace": "com.example",
    "fields": [
        {
            "name": "time",
