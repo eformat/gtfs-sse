@@ -7,7 +7,7 @@
 
 Uses:
 
-- [Kafka](htps://strimzi.io)
+- [Kafka](https://strimzi.io)
 - [Materalize](https://materialize.io)
 - [Apicurio Schema Registry](https://github.com/Apicurio/apicurio-registry)
 
