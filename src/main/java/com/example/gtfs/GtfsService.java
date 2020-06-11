@@ -41,7 +41,7 @@ public class GtfsService {
     final String optApiKey = "";
 
     /* Poll time for updating from gtfs source */
-    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "20")
+    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "10")
     public int pollValue;
 
     /**
