@@ -56,7 +56,6 @@ public class VehicleService {
             return null;
         }
         GtfsRealtime.TripDescriptor trip = vehicle.getTrip();
-        //System.out.println(trip);
         if (!trip.hasRouteId()) {
             return null;
         }
