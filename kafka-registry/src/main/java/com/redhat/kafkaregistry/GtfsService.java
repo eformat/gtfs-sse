@@ -2,13 +2,12 @@ package com.redhat.kafkaregistry;
 
 import com.google.common.io.ByteStreams;
 import com.google.transit.realtime.GtfsRealtime;
-import io.reactivex.Flowable;
-import org.apache.avro.Schema;
-import org.apache.avro.generic.GenericData;
-import org.apache.avro.generic.GenericData.Record;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Outgoing;
+import org.jboss.resteasy.annotations.SseElementType;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,11 +18,10 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.GregorianCalendar;
-import java.util.concurrent.TimeUnit;
+import java.time.Duration;
+import java.util.List;
 
 @ApplicationScoped
 @Path("/gtfs")
@@ -42,37 +40,17 @@ public class GtfsService {
 
     final String optApiKey = "";
 
-    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "5")
+    /* Poll time for updating from gtfs source */
+    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "20")
     public int pollValue;
 
-    private Record readGtfs() {
-        GtfsRealtime.FeedMessage msg = null;
-        byte[] gtfs;
-        Record record = null;
-        try (InputStream in = GetGtfs.feedUrlStream(optApiKey, optFeed, optUrl)) {
-            gtfs = ByteStreams.toByteArray(in);
-            msg = GtfsRealtime.FeedMessage.parseFrom(gtfs);
-
-            long timestamp;
-            if (msg != null && msg.hasHeader() && msg.getHeader().hasTimestamp()) {
-                timestamp = msg.getHeader().getTimestamp();
-            } else {
-                timestamp = new GregorianCalendar().getTimeInMillis();
-            }
-            Schema schema = new Schema.Parser().parse(
-                    new File(getClass().getClassLoader().getResource("gtfs-schema.avsc").getFile())
-            );
-
-            String vehiclesAsJsonString = vehicleService.getVehiclesAsString(msg);
-
-            record = new GenericData.Record(schema);
-            record.put("time", timestamp);
-            record.put("data", vehiclesAsJsonString);
-
-        } catch (IOException ex) {
-            ex.printStackTrace();
-        }
-        return record;
+    /**
+     * Blocking read from gtfs source
+     * @return
+     */
+    private Multi<String> readGtfs() {
+        Multi<String> blocking = Multi.createFrom().iterable(_read()).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return blocking;
     }
 
     /**
@@ -82,17 +60,16 @@ public class GtfsService {
      * @throws IOException
      */
     @Outgoing("gtfs-out")
-    public Flowable<Record> generate() throws IOException {
-        return Flowable.interval(pollValue, TimeUnit.SECONDS)
-                .onBackpressureDrop()
-                .map(tick -> {
-                    return readGtfs();
-                });
+    public Multi<String> generate() throws IOException {
+        Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(pollValue)).onOverflow().drop();
+        return ticks.onItem().produceMulti(
+                x -> readGtfs()
+        ).merge();
     }
 
     @Inject
     @Channel("gtfs-in")
-    Publisher<Record> rawData;
+    Publisher<String> rawData;
 
     /**
      * Read kafka topic and send as SSE
@@ -102,9 +79,28 @@ public class GtfsService {
     @GET
     @Path("/stream")
     @Produces(MediaType.SERVER_SENT_EVENTS)
-    //@SseElementType(MediaType.APPLICATION_JSON) //avro/binary
-    public Publisher<Record> stream() {
+    @SseElementType(MediaType.APPLICATION_JSON) //avro/binary
+    public Publisher<String> stream() {
         return rawData;
+    }
+
+    /**
+     * internal read method from realtime gtfs datasourcea
+     * @return
+     */
+    private List<String> _read() {
+        GtfsRealtime.FeedMessage msg = null;
+        byte[] gtfs;
+        List<String> vehicles = null;
+        try (InputStream in = GetGtfs.feedUrlStream(optApiKey, optFeed, optUrl)) {
+            gtfs = ByteStreams.toByteArray(in);
+            msg = GtfsRealtime.FeedMessage.parseFrom(gtfs);
+            vehicles = vehicleService.getVehicles(msg);
+
+        } catch (IOException ex) {
+            ex.printStackTrace();
+        }
+        return vehicles;
     }
 
 }

@@ -1,7 +1,6 @@
 package com.redhat.kafkaregistry;
 
 import com.google.transit.realtime.GtfsRealtime;
-import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -22,23 +21,20 @@ public class VehicleService {
     private Map<String, String> _vehicleIdsByEntityIds = new HashMap<String, String>();
     private Map<String, Vehicle> _vehiclesById = new ConcurrentHashMap<String, Vehicle>();
 
-    public String getVehiclesAsString(GtfsRealtime.FeedMessage feed) {
-        return getVehiclesAsString(handleVechicles(feed));
-    }
-
-    private String getVehiclesAsString(List<Vehicle> vehicles) {
+    public List<String> getVehicles(GtfsRealtime.FeedMessage feed) {
         try {
-            JSONArray array = new JSONArray();
-            for (Vehicle vehicle : vehicles) {
+            List<String> vehicleList = new ArrayList<String>();
+            for (Vehicle vehicle : handleVechicles(feed)) {
                 JSONObject obj = new JSONObject();
                 obj.put("id", vehicle.getId());
                 obj.put("label", vehicle.getLabel());
                 obj.put("lat", vehicle.getLat());
                 obj.put("lon", vehicle.getLon());
                 obj.put("lastUpdate", vehicle.getLastUpdate());
-                array.put(obj);
+                vehicleList.add(obj.toString());
             }
-            return array.toString();
+            return vehicleList;
+
         } catch (JSONException ex) {
             throw new IllegalStateException(ex);
         }

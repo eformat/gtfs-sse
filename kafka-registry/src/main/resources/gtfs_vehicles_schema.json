@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "type": "object",
+  "properties": {
+    "lastUpdate": {
+      "type": "integer"
+    },
+    "lon": {
+      "type": "number"
+    },
+    "id": {
+      "type": "string"
+    },
+    "label": {
+      "type": "string"
+    },
+    "lat": {
+      "type": "number"
+    }
+  },
+  "required": [
+    "lastUpdate",
+    "lon",
+    "id",
+    "label",
+    "lat"
+  ]
+}
