@@ -1,4 +1,4 @@
-package com.redhat.kafkaregistry;
+package com.example.gtfs;
 
 import com.google.common.io.ByteStreams;
 import com.google.transit.realtime.GtfsRealtime;

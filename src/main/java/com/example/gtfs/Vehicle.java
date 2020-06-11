@@ -1,4 +1,4 @@
-package com.redhat.kafkaregistry;
+package com.example.gtfs;
 
 public class Vehicle {
     private String id;

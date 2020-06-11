@@ -16,6 +16,8 @@ Requires:
 - podman-compose (or docker-compose)
 - jdk11, maven 3.6+
 
+![sql-bne-435][images/bne-435.png]
+
 Run demo
 ```bash
 # create materalize data directory
