@@ -85,7 +85,7 @@ public class GtfsService {
     }
 
     /**
-     * internal read method from realtime gtfs datasourcea
+     * internal read method from realtime gtfs datasource
      * @return
      */
     private List<String> _read() {
