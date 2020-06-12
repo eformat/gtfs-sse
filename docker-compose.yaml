@@ -19,7 +19,7 @@ services:
     image: strimzi/kafka:0.18.0-kafka-2.5.0
     command: [
       "sh", "-c",
-      'bin/kafka-server-start.sh config/server.properties --override listeners=$${KAFKA_LISTENERS} --override advertised.listeners=$${KAFKA_ADVERTISED_LISTENERS} --override zookeeper.connect=$${KAFKA_ZOOKEEPER_CONNECT} --override message.max.bytes=4000000'
+      "bin/kafka-server-start.sh config/server.properties --override listeners=$${KAFKA_LISTENERS} --override advertised.listeners=$${KAFKA_ADVERTISED_LISTENERS} --override zookeeper.connect=$${KAFKA_ZOOKEEPER_CONNECT} --override message.max.bytes=4000000"
     ]
     depends_on:
       - zookeeper
