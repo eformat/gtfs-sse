@@ -46,8 +46,15 @@ services:
 
   materialize:
     image: "quay.io/eformat/materialize-pod:latest"
+    command: [
+      "sh", "-c",
+      "/usr/local/bin/materialized -w 2 -D /work/mzdata"
+    ]
     ports:
       - "6875:6875"
-    hostname: materalize
+    environment:
+      MZ_LOG: pgwire=trace
+    hostname: materialize
     volumes:
-      - /tmp/mzdata:/work/mzdata:Z
+      - /home/mike/mzdata:/work/mzdata:Z
+      - /home/mike/Documents/PTV/gtfs:/work/gtfs:Z

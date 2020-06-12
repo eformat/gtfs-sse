@@ -23,7 +23,7 @@ Requires:
 Run demo
 ```bash
 # create materalize data directory
-mkdir -p /tmp/mzdata/
+mkdir -p $HOME/mzdata 
 
 # run infra locally (docker-compose should work also)
 podman-compose up -d
