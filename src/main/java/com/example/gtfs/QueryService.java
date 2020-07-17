@@ -34,7 +34,19 @@ public class QueryService {
     }
 
     @GET
-    @Path("/435")
+    @Path("/count")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(operationId = "countAll",
+            summary = "count all vehicles",
+            description = "This operation returns a count of all vehicle movements",
+            deprecated = false,
+            hidden = false)
+    public Long countAll() {
+        return Vehicle.count();
+    }
+
+    @GET
+    @Path("/route435")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(operationId = "getRoutes",
             summary = "get 435 routes",
@@ -46,7 +58,19 @@ public class QueryService {
     }
 
     @GET
-    @Path("/id/{route_id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Path("/count435")
+    @Operation(operationId = "count435",
+            summary = "count 435 vehicles",
+            description = "This operation returns a count of all 435 vehicle movements",
+            deprecated = false,
+            hidden = false)
+    public Long count435() {
+        return Vehicle.Route435.count();
+    }
+
+    @GET
+    @Path("/{route_id}")
     @Produces(MediaType.APPLICATION_JSON)
     @Operation(operationId = "getRouteById",
             summary = "get routes by id",
@@ -55,5 +79,17 @@ public class QueryService {
             hidden = false)
     public List<Vehicle> getRouteById(@PathParam String route_id) {
         return entityManager.createQuery("select r from ROUTE" + route_id + " r", Vehicle.class).getResultList();
+    }
+
+    @GET
+    @Path("/count/{route_id}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(operationId = "getRouteCountById",
+            summary = "get vehicle count by route id",
+            description = "This operation returns a count of all vehicle movements by route id",
+            deprecated = false,
+            hidden = false)
+    public Long getRouteCountById(@PathParam String route_id) {
+        return entityManager.createQuery("select count(*) from ROUTE" + route_id, Long.class).getSingleResult();
     }
 }
