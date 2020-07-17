@@ -61,6 +61,12 @@ SHOW COLUMNS FROM gtfs;
 
 # materialize all data
 CREATE MATERIALIZED VIEW all_gtfs AS
+    SELECT (text::JSONB)->>'id' as id,
+           (text::JSONB)->>'vid' as vid,
+           (text::JSONB)->>'label' as label,
+           (text::JSONB)->'lastUpdate' as lastUpdate,
+           CAST((text::JSONB)->'lat' as float) as lat,
+           CAST((text::JSONB)->'lon' as float) as lon
     FROM (SELECT * FROM gtfs);
 
 SELECT * from all_gtfs;
@@ -68,7 +74,9 @@ SHOW COLUMNS FROM all_gtfs;
 
 # materalize only the 435 bus
 CREATE MATERIALIZED VIEW ROUTE435 AS
-    WHERE label = '"435-1662"';
+    SELECT *
+    FROM all_gtfs
+    WHERE label = '435-1662';
 
 SELECT * from ROUTE435;
 SHOW COLUMNS FROM ROUTE435;
