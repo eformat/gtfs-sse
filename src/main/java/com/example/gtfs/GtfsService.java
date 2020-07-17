@@ -6,6 +6,7 @@ import com.google.common.io.ByteStreams;
 import com.google.transit.realtime.GtfsRealtime;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
+import io.smallrye.reactive.messaging.annotations.Broadcast;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.reactive.messaging.Channel;
@@ -44,7 +45,7 @@ public class GtfsService {
     final String optApiKey = "";
 
     /* Poll time for updating from gtfs source */
-    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "10")
+    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "5")
     public int pollValue;
 
     /**
@@ -73,6 +74,7 @@ public class GtfsService {
 
     @Inject
     @Channel("gtfs-in")
+    @Broadcast
     Publisher<Vehicle> rawData;
 
     /**

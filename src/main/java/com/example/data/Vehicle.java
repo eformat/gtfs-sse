@@ -16,6 +16,14 @@ public class Vehicle extends PanacheEntityBase {
     public static class Route435 extends Vehicle {
     }
 
+    @Entity(name = "ROUTE444")
+    public static class Route444 extends Vehicle {
+    }
+
+    @Entity(name = "ROUTEUQSL")
+    public static class RouteUQSL extends Vehicle {
+    }
+
     @Id
     private String id = UUID.randomUUID().toString();
 

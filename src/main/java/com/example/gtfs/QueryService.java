@@ -1,8 +1,12 @@
 package com.example.gtfs;
 
 import com.example.data.Vehicle;
+import io.smallrye.mutiny.Multi;
+import io.smallrye.mutiny.infrastructure.Infrastructure;
 import org.eclipse.microprofile.openapi.annotations.Operation;
+import org.jboss.resteasy.annotations.SseElementType;
 import org.jboss.resteasy.annotations.jaxrs.PathParam;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,6 +16,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import java.time.Duration;
 import java.util.List;
 
 @Path("/query")
@@ -91,5 +96,29 @@ public class QueryService {
             hidden = false)
     public Long getRouteCountById(@PathParam String route_id) {
         return entityManager.createQuery("select count(*) from ROUTE" + route_id, Long.class).getSingleResult();
+    }
+
+    @GET
+    @Path("/stream/{route_id}")
+    @Produces(MediaType.SERVER_SENT_EVENTS)
+    @SseElementType(MediaType.APPLICATION_JSON) //avro/binary
+    @Operation(operationId = "stream",
+            summary = "stream gtfs data by id",
+            description = "This operation returns vehicle gtfs data by id",
+            deprecated = false,
+            hidden = false)
+    public Publisher<Vehicle> stream(@PathParam String route_id) {
+        Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(5)).onOverflow().drop();
+        return ticks.on().subscribed(subscription -> log.info("We are subscribed!"))
+                .on().cancellation(() -> log.info("Downstream has cancelled the interaction"))
+                .onFailure().invoke(failure -> log.warn("Failed with " + failure.getMessage()))
+                .onCompletion().invoke(() -> log.info("Completed"))
+                .onItem().produceMulti(
+                        x -> routeMulti(route_id)
+                ).merge();
+    }
+
+    private Multi<Vehicle> routeMulti(String route_id) {
+        return Multi.createFrom().iterable(getRouteById(route_id)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }

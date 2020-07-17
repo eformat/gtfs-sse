@@ -87,6 +87,11 @@ DROP VIEW all_gtfs;
 DROP SOURCE gtfs;
 ```
 
+From Google Maps browse current 435 Bus, and see vehicle id in materialize: 
+```bash
+SELECT * from ROUTE435 where vid = '-1366625436_2839';
+```
+
 Apicurio schema registry
 ```
 http://localhost:8081/ui/artifacts
