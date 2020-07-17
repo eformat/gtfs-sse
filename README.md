@@ -29,7 +29,6 @@ mkdir -p $HOME/mzdata
 podman-compose up -d
 
 # maven compile and run java app
-cd kafka-registry
 mvn compile quarkus:dev
 
 # browse kafka topic
@@ -44,7 +43,14 @@ http http://localhost:8080/gtfs/stream --stream
 
 TimelyDataFlow using materialize.io
 ```
-# psql -h localhost -p 6875 materialize
+# Schema load
+psql -h localhost -p 6875 materialize -f ./load.sql
+
+# Sechema drop
+psql -h localhost -p 6875 materialize -f ./drop.sql
+
+# Do it Manually:
+psql -h localhost -p 6875 materialize
 
 # create kafka source
 CREATE SOURCE gtfs
@@ -69,7 +75,7 @@ SHOW COLUMNS FROM all_gtfs;
 CREATE MATERIALIZED VIEW BUS435 AS
     SELECT id, label, CAST(lastUpdate AS float), CAST(lat as float), CAST(lon as float)
     FROM all_gtfs
-    WHERE label = '"435-1607"';
+    WHERE label = '"435-1662"';
 
 SELECT * from BUS435;
 SHOW COLUMNS FROM BUS435;

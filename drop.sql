@@ -1,0 +1,3 @@
+DROP VIEW BUS435;
+DROP VIEW all_gtfs;
+DROP SOURCE gtfs;

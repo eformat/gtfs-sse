@@ -1,4 +1,4 @@
-package com.example.gtfs;
+package com.example.data;
 
 public class Vehicle {
     private String id;

@@ -1,5 +1,6 @@
 package com.example.gtfs;
 
+import com.example.data.GetGtfs;
 import com.google.common.io.ByteStreams;
 import com.google.transit.realtime.GtfsRealtime;
 import io.smallrye.mutiny.Multi;

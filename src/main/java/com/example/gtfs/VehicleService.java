@@ -1,8 +1,8 @@
 package com.example.gtfs;
 
+import com.example.data.Vehicle;
 import com.google.transit.realtime.GtfsRealtime;
-import org.json.JSONException;
-import org.json.JSONObject;
+import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,22 +22,17 @@ public class VehicleService {
     private Map<String, Vehicle> _vehiclesById = new ConcurrentHashMap<String, Vehicle>();
 
     public List<String> getVehicles(GtfsRealtime.FeedMessage feed) {
-        try {
-            List<String> vehicleList = new ArrayList<String>();
-            for (Vehicle vehicle : handleVechicles(feed)) {
-                JSONObject obj = new JSONObject();
-                obj.put("id", vehicle.getId());
-                obj.put("label", vehicle.getLabel());
-                obj.put("lat", vehicle.getLat());
-                obj.put("lon", vehicle.getLon());
-                obj.put("lastUpdate", vehicle.getLastUpdate());
-                vehicleList.add(obj.toString());
-            }
-            return vehicleList;
-
-        } catch (JSONException ex) {
-            throw new IllegalStateException(ex);
+        List<String> vehicleList = new ArrayList<String>();
+        for (Vehicle vehicle : handleVechicles(feed)) {
+            JsonObject obj = new JsonObject();
+            obj.put("id", vehicle.getId());
+            obj.put("label", vehicle.getLabel());
+            obj.put("lat", vehicle.getLat());
+            obj.put("lon", vehicle.getLon());
+            obj.put("lastUpdate", vehicle.getLastUpdate());
+            vehicleList.add(obj.toString());
         }
+        return vehicleList;
     }
 
     private String getVehicleId(GtfsRealtime.VehiclePosition vehicle) {

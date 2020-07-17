@@ -57,4 +57,3 @@ services:
     hostname: materialize
     volumes:
       - /home/mike/mzdata:/work/mzdata:Z
-      - /home/mike/Documents/PTV/gtfs:/work/gtfs:Z
