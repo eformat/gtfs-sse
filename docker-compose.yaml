@@ -53,7 +53,7 @@ services:
     ports:
       - "6875:6875"
     environment:
-      MZ_LOG: pgwire=trace
+      MZ_LOG: pgwire=info #trace
     hostname: materialize
     volumes:
       - /home/mike/mzdata:/work/mzdata:Z

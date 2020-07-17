@@ -108,7 +108,7 @@ public class QueryService {
             deprecated = false,
             hidden = false)
     public Publisher<Vehicle> stream(@PathParam String route_id) {
-        Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(5)).onOverflow().drop();
+        Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(3)).onOverflow().drop();
         return ticks.on().subscribed(subscription -> log.info("We are subscribed!"))
                 .on().cancellation(() -> log.info("Downstream has cancelled the interaction"))
                 .onFailure().invoke(failure -> log.warn("Failed with " + failure.getMessage()))
