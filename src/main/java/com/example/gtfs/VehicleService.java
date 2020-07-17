@@ -2,7 +2,6 @@ package com.example.gtfs;
 
 import com.example.data.Vehicle;
 import com.google.transit.realtime.GtfsRealtime;
-import io.vertx.core.json.JsonObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,18 +20,8 @@ public class VehicleService {
     private Map<String, String> _vehicleIdsByEntityIds = new HashMap<String, String>();
     private Map<String, Vehicle> _vehiclesById = new ConcurrentHashMap<String, Vehicle>();
 
-    public List<String> getVehicles(GtfsRealtime.FeedMessage feed) {
-        List<String> vehicleList = new ArrayList<String>();
-        for (Vehicle vehicle : handleVechicles(feed)) {
-            JsonObject obj = new JsonObject();
-            obj.put("id", vehicle.getId());
-            obj.put("label", vehicle.getLabel());
-            obj.put("lat", vehicle.getLat());
-            obj.put("lon", vehicle.getLon());
-            obj.put("lastUpdate", vehicle.getLastUpdate());
-            vehicleList.add(obj.toString());
-        }
-        return vehicleList;
+    public List<Vehicle> getVehicles(GtfsRealtime.FeedMessage feed) {
+        return handleVechicles(feed);
     }
 
     private String getVehicleId(GtfsRealtime.VehiclePosition vehicle) {
@@ -85,7 +74,7 @@ public class VehicleService {
             }
             GtfsRealtime.Position position = vehicle.getPosition();
             Vehicle v = new Vehicle();
-            v.setId(vehicleId);
+            v.setVid(vehicleId);
             v.setLabel(vehicleLabel);
             v.setLat(position.getLatitude());
             v.setLon(position.getLongitude());

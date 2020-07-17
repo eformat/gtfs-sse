@@ -1,11 +1,13 @@
 package com.example.gtfs;
 
 import com.example.data.GetGtfs;
+import com.example.data.Vehicle;
 import com.google.common.io.ByteStreams;
 import com.google.transit.realtime.GtfsRealtime;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
+import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.reactive.messaging.Channel;
 import org.eclipse.microprofile.reactive.messaging.Outgoing;
 import org.jboss.resteasy.annotations.SseElementType;
@@ -47,21 +49,22 @@ public class GtfsService {
 
     /**
      * Blocking read from gtfs source
+     *
      * @return
      */
-    private Multi<String> readGtfs() {
-        Multi<String> blocking = Multi.createFrom().iterable(_read()).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+    private Multi<Vehicle> readGtfs() {
+        Multi<Vehicle> blocking = Multi.createFrom().iterable(_read()).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
         return blocking;
     }
 
     /**
      * Send gtfs data to kafka topic
      *
-     * @return
      * @throws IOException
+     * @returnrealtime
      */
     @Outgoing("gtfs-out")
-    public Multi<String> generate() throws IOException {
+    public Multi<Vehicle> generate() throws IOException {
         Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(pollValue)).onOverflow().drop();
         return ticks.onItem().produceMulti(
                 x -> readGtfs()
@@ -70,7 +73,7 @@ public class GtfsService {
 
     @Inject
     @Channel("gtfs-in")
-    Publisher<String> rawData;
+    Publisher<Vehicle> rawData;
 
     /**
      * Read kafka topic and send as SSE
@@ -81,18 +84,24 @@ public class GtfsService {
     @Path("/stream")
     @Produces(MediaType.SERVER_SENT_EVENTS)
     @SseElementType(MediaType.APPLICATION_JSON) //avro/binary
-    public Publisher<String> stream() {
+    @Operation(operationId = "stream",
+            summary = "stream gtfs data",
+            description = "This operation returns all vehicle gtfs data from kafka",
+            deprecated = false,
+            hidden = false)
+    public Publisher<Vehicle> stream() {
         return rawData;
     }
 
     /**
      * internal read method from realtime gtfs datasource
+     *
      * @return
      */
-    private List<String> _read() {
+    private List<Vehicle> _read() {
         GtfsRealtime.FeedMessage msg = null;
         byte[] gtfs;
-        List<String> vehicles = null;
+        List<Vehicle> vehicles = null;
         try (InputStream in = GetGtfs.feedUrlStream(optApiKey, optFeed, optUrl)) {
             gtfs = ByteStreams.toByteArray(in);
             msg = GtfsRealtime.FeedMessage.parseFrom(gtfs);

@@ -8,7 +8,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.net.URLConnection;
 
-
 public class GetGtfs {
 
     private static final Logger log = LoggerFactory.getLogger(GetGtfs.class);
