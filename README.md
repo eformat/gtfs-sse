@@ -92,6 +92,51 @@ From Google Maps browse current 435 Bus, and see vehicle id in materialize:
 SELECT * from ROUTE435 where vid = '-1366625436_2839';
 ```
 
+Joining Some Streams
+```bash
+echo "label, name" > ~/mzdata/names.csv
+
+CREATE SOURCE names_csv
+FROM FILE '/work/mzdata/names.csv'
+WITH ( tail=true )
+FORMAT CSV WITH HEADER;
+
+CREATE MATERIALIZED VIEW names AS
+    SELECT *
+    FROM names_csv;
+
+SELECT * FROM names;
+
+echo 435-1662, "Bus 435" >> ~/mzdata/names.csv
+echo 444-1662, "Bus 444" >> ~/mzdata/names.csv
+echo UQSL-1410, "Ferry UQSL" >> ~/mzdata/names.csv
+
+DROP VIEW names;
+DROP SOURCE names_csv;
+
+--
+
+CREATE MATERIALIZED VIEW ROUTE435 AS
+    SELECT *
+    FROM all_gtfs g, names n
+    WHERE g.label = '435-1662'
+    AND g.label = n.label;
+
+
+CREATE MATERIALIZED VIEW ROUTE444 AS
+    SELECT *
+    FROM all_gtfs g, names n
+    WHERE g.label = '444-1662'
+    AND g.label = n.label;
+
+
+CREATE MATERIALIZED VIEW ROUTEUQSL AS
+    SELECT *
+    FROM all_gtfs g, names n
+    WHERE g.label = 'UQSL-1410'
+    AND g.label = n.label;
+```
+
 Apicurio schema registry
 ```
 http://localhost:8081/ui/artifacts
