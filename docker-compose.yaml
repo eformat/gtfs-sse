@@ -19,7 +19,7 @@ services:
     image: strimzi/kafka:0.18.0-kafka-2.5.0
     command: [
       "sh", "-c",
-      "bin/kafka-server-start.sh config/server.properties --override listeners=$${KAFKA_LISTENERS} --override advertised.listeners=$${KAFKA_ADVERTISED_LISTENERS} --override zookeeper.connect=$${KAFKA_ZOOKEEPER_CONNECT} --override message.max.bytes=4000000 --override default.replication.factor=$${KAFKA_DEFAULT_REPL_FACTOR} --override num.partitions=$${KAFKA_NUM_PARTITIONS} --override delete.topic.enable=true"
+      "bin/kafka-server-start.sh config/server.properties --override listeners=$${KAFKA_LISTENERS} --override advertised.listeners=$${KAFKA_ADVERTISED_LISTENERS} --override zookeeper.connect=$${KAFKA_ZOOKEEPER_CONNECT} --override message.max.bytes=4000000 --override default.replication.factor=$${KAFKA_DEFAULT_REPL_FACTOR} --override num.partitions=$${KAFKA_NUM_PARTITIONS} --override delete.topic.enable=true --override group.min.session.timeout.ms=250"
     ]
     depends_on:
       - zookeeper
