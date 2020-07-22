@@ -38,7 +38,7 @@ kafkacat -b localhost:9092 -C -o end -q -u -t gtfs
 http http://localhost:8080/gtfs/stream --stream
 
 # delete topic if you need to reset data (restart materaliaze container as well)
-/opt/kafka_2.12-2.2.0/bin/kafka-topics.sh --bootstrap-server localhost:9092 --delete --topic gtfs
+/opt/kafka_2.12-2.2.0/bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic gtfs
 ```
 
 TimelyDataFlow using materialize.io
