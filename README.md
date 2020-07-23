@@ -39,6 +39,20 @@ http http://localhost:8080/gtfs/stream --stream
 
 # delete topic if you need to reset data (restart materaliaze container as well)
 /opt/kafka_2.12-2.2.0/bin/kafka-topics.sh --zookeeper localhost:2181 --delete --topic gtfs
+
+# build native mode locally
+make podman-build
+
+# run native locally
+export QUARKUS_PROFILE=dev; 
+./target/gtfs-sse-1.0-SNAPSHOT-runner
+```
+
+Demo UI
+- Note: you need to modify and append an api key using `?key=<google maps api key>` in index.html to avoid google maps developer mode.
+```bash
+# browse to
+http://localhost:8080/
 ```
 
 TimelyDataFlow using materialize.io
@@ -141,6 +155,17 @@ Apicurio schema registry
 ```
 http://localhost:8081/ui/artifacts
 http://localhost:8081/api
+```
+
+### OpenShift
+
+Requirements:
+- deploy strimzi 0.18+ operator at cluster scope
+- dynamic storage provisioning
+
+```bash
+oc new-project gtfs-sse
+oc create -f opensfhift-deployment.yml
 ```
 
 #### FIXME

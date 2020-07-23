@@ -17,6 +17,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.time.Duration;
+import java.util.Date;
 import java.util.List;
 
 @Path("/query")
@@ -99,12 +100,26 @@ public class QueryService {
     }
 
     @GET
+    @Path("/{route_id}/{time}")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(operationId = "getRouteByIdTIme",
+            summary = "get routes by id since time",
+            description = "This operation returns all vehicle movements for route by id since a given time",
+            deprecated = false,
+            hidden = false)
+    public List<Vehicle> getRouteByIdTime(@PathParam String route_id, @PathParam long time) {
+        Date date = new Date(time - 30000); // adjust by minus 30sec
+        log.info("getRouteByIdTime: " + route_id + " " + date.getTime());
+        return entityManager.createQuery("select r from ROUTE" + route_id + " r where lastupdate >= " + date.getTime(), Vehicle.class).getResultList();
+    }
+
+    @GET
     @Path("/stream/{route_id}")
     @Produces(MediaType.SERVER_SENT_EVENTS)
     @SseElementType(MediaType.APPLICATION_JSON) //avro/binary
     @Operation(operationId = "stream",
-            summary = "stream gtfs data by id",
-            description = "This operation returns vehicle gtfs data by id",
+            summary = "stream gtfs data by id since a given time",
+            description = "This operation returns vehicle gtfs data by id since a given time",
             deprecated = false,
             hidden = false)
     public Publisher<Vehicle> stream(@PathParam String route_id) {
@@ -119,6 +134,6 @@ public class QueryService {
     }
 
     private Multi<Vehicle> routeMulti(String route_id) {
-        return Multi.createFrom().iterable(getRouteById(route_id)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return Multi.createFrom().iterable(getRouteByIdTime(route_id, new Date().getTime())).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }

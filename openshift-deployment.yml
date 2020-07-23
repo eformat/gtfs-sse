@@ -1,0 +1,320 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: schema
+data:
+  load.sql: |+
+    CREATE SOURCE gtfs
+    FROM KAFKA BROKER 'gtfs-sse-cluster-kafka-bootstrap:9092' TOPIC 'gtfs'
+    FORMAT TEXT;
+
+    CREATE MATERIALIZED VIEW all_gtfs AS
+        SELECT (text::JSONB)->>'id' as id,
+               (text::JSONB)->>'vid' as vid,
+               (text::JSONB)->>'label' as label,
+               CAST((text::JSONB)->'lastUpdate' as float) as lastUpdate,
+               CAST((text::JSONB)->'lat' as float) as lat,
+               CAST((text::JSONB)->'lon' as float) as lon
+        FROM (SELECT * FROM gtfs);
+
+    CREATE MATERIALIZED VIEW ROUTE435 AS
+        SELECT *
+        FROM all_gtfs
+        WHERE label = '435-1662';
+
+    CREATE MATERIALIZED VIEW ROUTE444 AS
+        SELECT *
+        FROM all_gtfs
+        WHERE label = '444-1662';
+
+    CREATE MATERIALIZED VIEW ROUTEUQSL AS
+        SELECT *
+        FROM all_gtfs
+        WHERE label = 'UQSL-1410';
+
+    CREATE MATERIALIZED VIEW ROUTEALL AS
+        SELECT *
+        FROM all_gtfs;
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  labels:
+    app.kubernetes.io/part-of: gtfs-sse
+    app: materialize
+  name: materialize
+spec:
+  podManagementPolicy: Parallel
+  replicas: 2
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: materialize
+  serviceName: materialize
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app.kubernetes.io/part-of: tripvibe
+        app: materialize
+      name: materialize
+    spec:
+      initContainers:
+        - name: clean
+          image: registry.redhat.io/ubi8/ubi:latest
+          command: [sh, -c]
+          args:
+            - 'rm -f /work/mzdata/catalog'
+          volumeMounts:
+            - mountPath: /work/mzdata
+              name: mzdata
+      containers:
+        - image: registry.redhat.io/rhel8/postgresql-96:latest
+          imagePullPolicy: IfNotPresent
+          name: init-sidecar
+          command:
+            - /bin/sh
+            - -c
+            - 'while true; do psql -q -h localhost -p 6875 materialize -c "SHOW CREATE VIEW ROUTE435" 1>/dev/null; if [ $? -eq 1 ]; then echo " 🏗 no schema found - creating one 🏗"; psql -h materialize -p 6875 materialize -f /tmp/schema/load.sql; fi; sleep 5; done'
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /tmp/schema/load.sql
+              name: schema
+              subPath: load.sql
+        - command:
+            - /usr/local/bin/materialized
+            - --w=2
+          env:
+            - name: PATH
+              value: /usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+            - name: TERM
+              value: xterm
+            - name: container
+              value: oci
+            - name: HOSTNAME
+              value: materalize
+          image: quay.io/eformat/materialize-pod:0.3.1
+          name: materialize-pod
+          resources: {}
+          securityContext: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          volumeMounts:
+            - mountPath: /work/mzdata
+              name: mzdata
+          workingDir: /work
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - configMap:
+            defaultMode: 420
+            name: schema
+          name: schema
+        - configMap:
+            defaultMode: 420
+            name: load-auto
+          name: load-auto
+  updateStrategy:
+    type: OnDelete
+  volumeClaimTemplates:
+    - metadata:
+        creationTimestamp: null
+        name: mzdata
+      spec:
+        accessModes:
+          - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+        volumeMode: Filesystem
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: materialize
+  name: materialize
+spec:
+  ports:
+  - name: psql
+    port: 6875
+    protocol: TCP
+    targetPort: 6875
+  selector:
+    app: materialize
+  sessionAffinity: None
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: Kafka
+metadata:
+  name: gtfs-sse-cluster
+spec:
+  kafka:
+    version: 2.5.0
+    replicas: 3
+    listeners:
+      plain: {}
+      tls: {}
+    config:
+      offsets.topic.replication.factor: 3
+      transaction.state.log.replication.factor: 3
+      transaction.state.log.min.isr: 2
+      log.message.format.version: "2.5"
+      delete.topic.enable: true
+      num.partitions: 3
+      default.replication.factor: 2
+      group.min.session.timeout.ms: 250
+    storage:
+      type: jbod
+      volumes:
+        - id: 0
+          type: persistent-claim
+          size: 10Gi
+          deleteClaim: false
+  zookeeper:
+    replicas: 3
+    storage:
+      type: persistent-claim
+      size: 10Gi
+      deleteClaim: false
+  entityOperator:
+    topicOperator: {}
+    userOperator: {}
+---
+apiVersion: image.openshift.io/v1
+kind: ImageStream
+metadata:
+  labels:
+    app: gtfs-sse
+    app.kubernetes.io/component: gtfs-sse
+    app.kubernetes.io/instance: gtfs-sse
+  name: gtfs-sse
+spec:
+  lookupPolicy:
+    local: false
+  tags:
+  - annotations:
+      openshift.io/imported-from: quay.io/eformat/gtfs-sse:latest
+    from:
+      kind: DockerImage
+      name: quay.io/eformat/gtfs-sse:latest
+    importPolicy: {}
+    name: latest
+    referencePolicy:
+      type: Source
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: gtfs-sse
+    app.kubernetes.io/component: gtfs-sse
+    app.kubernetes.io/instance: gtfs-sse
+  name: gtfs-sse
+spec:
+  ports:
+  - name: 8080-tcp
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  - name: 8443-tcp
+    port: 8443
+    protocol: TCP
+    targetPort: 8443
+  selector:
+    deploymentconfig: gtfs-sse
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: apps.openshift.io/v1
+kind: DeploymentConfig
+metadata:
+  labels:
+    app: gtfs-sse
+    app.kubernetes.io/component: gtfs-sse
+    app.kubernetes.io/instance: gtfs-sse
+  name: gtfs-sse
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    deploymentconfig: gtfs-sse
+  strategy:
+    activeDeadlineSeconds: 21600
+    resources: {}
+    rollingParams:
+      intervalSeconds: 1
+      maxSurge: 25%
+      maxUnavailable: 25%
+      timeoutSeconds: 600
+      updatePeriodSeconds: 1
+    type: Rolling
+  template:
+    metadata:
+      annotations:
+        openshift.io/generated-by: OpenShiftNewApp
+      creationTimestamp: null
+      labels:
+        deploymentconfig: gtfs-sse
+    spec:
+      containers:
+      - env:
+          - name: QUARKUS_PROFILE
+            value: prod
+        image: ' '
+        imagePullPolicy: Always
+        name: gtfs-sse
+        ports:
+        - containerPort: 8080
+          protocol: TCP
+        - containerPort: 8443
+          protocol: TCP
+        resources: {}
+        terminationMessagePath: /dev/termination-log
+        terminationMessagePolicy: File
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      schedulerName: default-scheduler
+      securityContext: {}
+      terminationGracePeriodSeconds: 30
+  test: false
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - gtfs-sse
+      from:
+        kind: ImageStreamTag
+        name: gtfs-sse:latest
+      lastTriggeredImage: quay.io/eformat/gtfs-sse:latest
+    type: ImageChange
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  labels:
+    app: gtfs-sse
+    app.kubernetes.io/component: gtfs-sse
+    app.kubernetes.io/instance: gtfs-sse
+  name: gtfs-sse
+spec:
+  port:
+    targetPort: 8080-tcp
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge
+  to:
+    kind: Service
+    name: gtfs-sse
+    weight: 100
+  wildcardPolicy: None
