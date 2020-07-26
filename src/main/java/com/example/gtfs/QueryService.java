@@ -124,4 +124,16 @@ public class QueryService {
     private Multi<Vehicle> routeMulti(String route_id) {
         return Multi.createFrom().iterable(getRouteById(route_id)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
+
+    @GET
+    @Path("/routes")
+    @Produces(MediaType.APPLICATION_JSON)
+    @Operation(operationId = "getRouteList",
+            summary = "get routes list",
+            description = "This operation returns all routes list",
+            deprecated = false,
+            hidden = false)
+    public List<String> getRouteList() {
+        return entityManager.createQuery("select distinct label from ROUTELATEST", String.class).getResultList();
+    }
 }

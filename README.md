@@ -165,7 +165,7 @@ Requirements:
 
 ```bash
 oc new-project gtfs-sse
-oc create -f opensfhift-deployment.yml
+oc create -f openshift-deployment.yml
 ```
 
 #### FIXME

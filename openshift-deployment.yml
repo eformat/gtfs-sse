@@ -5,8 +5,9 @@ metadata:
 data:
   load.sql: |+
     CREATE SOURCE latestgtfs
-    FROM KAFKA BROKER 'localhost:9092' TOPIC 'latest-gtfs'
-    FORMAT TEXT;
+    FROM KAFKA BROKER 'gtfs-sse-cluster-kafka-bootstrap:9092' TOPIC 'latest-gtfs'
+    FORMAT TEXT
+    ENVELOPE UPSERT;
 
     CREATE MATERIALIZED VIEW ROUTELATEST AS
         SELECT (text::JSONB)->>'id' as id,
@@ -318,3 +319,34 @@ spec:
     name: gtfs-sse
     weight: 100
   wildcardPolicy: None
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaTopic
+metadata:
+  name: latest-gtfs
+  labels:
+    strimzi.io/cluster: gtfs-sse-cluster
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  config:
+    cleanup.policy: compact
+    delete.retention.ms: 100
+    segment.ms: 100
+    min.cleanable.dirty.ratio: 0.01
+  partitions: 10
+  replicas: 2
+  topicName: latest-gtfs
+---
+apiVersion: kafka.strimzi.io/v1beta1
+kind: KafkaTopic
+metadata:
+  name: gtfs
+  labels:
+    strimzi.io/cluster: gtfs-sse-cluster
+  annotations:
+    argocd.argoproj.io/sync-wave: "3"
+spec:
+  partitions: 3
+  replicas: 2
+  topicName: gtfs

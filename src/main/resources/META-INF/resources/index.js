@@ -240,7 +240,7 @@ function start(search_term) {
 }
 
 function myClickFunctionSearch() {
-    var search_term = document.getElementById('search_term').value ? document.getElementById('search_term').value : document.getElementById('search_term').placeholder;
+    var search_term = document.getElementById('select_route').value ? document.getElementById('select_route').value : 'all';
     start(search_term)
     // disable button
     $(this).prop("disabled", true);
@@ -261,6 +261,4 @@ function myCancelFunctionSearch() {
     document.getElementById("btnFetchSearch").disabled = false;
     document.getElementById("btnFetchSearch").innerHTML = "Submit"
 }
-
-
 
