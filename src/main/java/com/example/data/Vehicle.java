@@ -8,7 +8,7 @@ import javax.persistence.Inheritance;
 import javax.persistence.InheritanceType;
 import java.util.UUID;
 
-@Entity(name = "all_gtfs")
+@Entity(name = "ROUTELATEST")
 @Inheritance(strategy = InheritanceType.TABLE_PER_CLASS)
 public class Vehicle extends PanacheEntityBase {
 
@@ -22,10 +22,6 @@ public class Vehicle extends PanacheEntityBase {
 
     @Entity(name = "ROUTEUQSL")
     public static class RouteUQSL extends Vehicle {
-    }
-
-    @Entity(name = "ROUTEALL")
-    public static class RouteALL extends Vehicle {
     }
 
     @Id

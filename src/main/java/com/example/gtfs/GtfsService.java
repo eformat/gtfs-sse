@@ -7,6 +7,8 @@ import com.google.transit.realtime.GtfsRealtime;
 import io.smallrye.mutiny.Multi;
 import io.smallrye.mutiny.infrastructure.Infrastructure;
 import io.smallrye.reactive.messaging.annotations.Broadcast;
+import io.smallrye.reactive.messaging.kafka.KafkaRecord;
+import io.smallrye.reactive.messaging.kafka.OutgoingKafkaRecord;
 import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.eclipse.microprofile.openapi.annotations.Operation;
 import org.eclipse.microprofile.reactive.messaging.Channel;
@@ -45,7 +47,7 @@ public class GtfsService {
     final String optApiKey = "";
 
     /* Poll time for updating from gtfs source */
-    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "3")
+    @ConfigProperty(name = "gtfs.pollValue", defaultValue = "2")
     public int pollValue;
 
     /**
@@ -53,27 +55,48 @@ public class GtfsService {
      *
      * @return
      */
-    private Multi<Vehicle> readGtfs() {
+    private Multi<OutgoingKafkaRecord<String, Vehicle>> readGtfs() {
         Multi<Vehicle> blocking = Multi.createFrom().iterable(_read()).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
-        return blocking;
+        return Multi.createFrom().iterable(
+                blocking.collectItems().asList().await().indefinitely()
+        ).map(
+                v -> KafkaRecord.of(v.getVid(), v)
+        ).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 
     /**
-     * Send gtfs data to kafka topic
-     *
+     * Send to all messages topic
+     * @return
      * @throws IOException
-     * @returnrealtime
      */
     @Outgoing("gtfs-out")
-    public Multi<Vehicle> generate() throws IOException {
+    public Publisher<OutgoingKafkaRecord<String, Vehicle>> generateAll() throws IOException {
         Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(pollValue)).onOverflow().drop();
         return ticks.onItem().produceMulti(
                 x -> readGtfs()
         ).merge();
     }
 
+    /**
+     * Send gtfs data to compacted kafka topic
+     *
+     * @throws IOException
+     * @returnrealtime
+     */
+    @Outgoing("latest-gtfs-out")
+    public Publisher<OutgoingKafkaRecord<String, Vehicle>> generate() throws IOException {
+        Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(pollValue)).onOverflow().drop();
+        return ticks.on().subscribed(subscription -> log.info("We are subscribed!"))
+                .on().cancellation(() -> log.info("Downstream has cancelled the interaction"))
+                .onFailure().invoke(failure -> log.warn("Failed with " + failure.getMessage()))
+                .onCompletion().invoke(() -> log.info("Completed"))
+                .onItem().produceMulti(
+                        x -> readGtfs()
+                ).merge();
+    }
+
     @Inject
-    @Channel("gtfs-in")
+    @Channel("latest-gtfs-in")
     @Broadcast
     Publisher<Vehicle> rawData;
 

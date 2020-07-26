@@ -4,37 +4,33 @@ metadata:
   name: schema
 data:
   load.sql: |+
-    CREATE SOURCE gtfs
-    FROM KAFKA BROKER 'gtfs-sse-cluster-kafka-bootstrap:9092' TOPIC 'gtfs'
+    CREATE SOURCE latestgtfs
+    FROM KAFKA BROKER 'localhost:9092' TOPIC 'latest-gtfs'
     FORMAT TEXT;
 
-    CREATE MATERIALIZED VIEW all_gtfs AS
+    CREATE MATERIALIZED VIEW ROUTELATEST AS
         SELECT (text::JSONB)->>'id' as id,
                (text::JSONB)->>'vid' as vid,
                (text::JSONB)->>'label' as label,
                CAST((text::JSONB)->'lastUpdate' as float) as lastUpdate,
                CAST((text::JSONB)->'lat' as float) as lat,
                CAST((text::JSONB)->'lon' as float) as lon
-        FROM (SELECT * FROM gtfs);
+        FROM (SELECT * FROM latestgtfs);
 
     CREATE MATERIALIZED VIEW ROUTE435 AS
         SELECT *
-        FROM all_gtfs
+        FROM ROUTELATEST
         WHERE label = '435-1662';
 
     CREATE MATERIALIZED VIEW ROUTE444 AS
         SELECT *
-        FROM all_gtfs
+        FROM ROUTELATEST
         WHERE label = '444-1662';
 
     CREATE MATERIALIZED VIEW ROUTEUQSL AS
         SELECT *
-        FROM all_gtfs
+        FROM ROUTELATEST
         WHERE label = 'UQSL-1410';
-
-    CREATE MATERIALIZED VIEW ROUTEALL AS
-        SELECT *
-        FROM all_gtfs;
 ---
 apiVersion: apps/v1
 kind: StatefulSet
@@ -75,7 +71,7 @@ spec:
           command:
             - /bin/sh
             - -c
-            - 'while true; do psql -q -h localhost -p 6875 materialize -c "SHOW CREATE VIEW ROUTE435" 1>/dev/null; if [ $? -eq 1 ]; then echo " 🏗 no schema found - creating one 🏗"; psql -h materialize -p 6875 materialize -f /tmp/schema/load.sql; fi; sleep 5; done'
+            - 'while true; do psql -q -h localhost -p 6875 materialize -c "SHOW CREATE VIEW ROUTE435;" 1>/dev/null; if [ $? -eq 1 ]; then echo " 🏗 no schema found - creating one 🏗"; psql -h materialize -p 6875 materialize -f /tmp/schema/load.sql; fi; sleep 5; done'
           resources: {}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File
@@ -97,7 +93,11 @@ spec:
               value: materalize
           image: quay.io/eformat/materialize-pod:0.3.1
           name: materialize-pod
-          resources: {}
+          resources:
+            limits:
+              memory: "14Gi"
+            requests:
+              memory: "500Mi"
           securityContext: {}
           terminationMessagePath: /dev/termination-log
           terminationMessagePolicy: File

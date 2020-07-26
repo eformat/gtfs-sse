@@ -17,7 +17,6 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import java.time.Duration;
-import java.util.Date;
 import java.util.List;
 
 @Path("/query")
@@ -84,7 +83,10 @@ public class QueryService {
             deprecated = false,
             hidden = false)
     public List<Vehicle> getRouteById(@PathParam String route_id) {
-        return entityManager.createQuery("select r from ROUTE" + route_id + " r", Vehicle.class).getResultList();
+        if (route_id.toLowerCase().equals("all"))
+            return getAllRoutes();
+        else
+            return entityManager.createQuery("select r from ROUTELATEST r where label = '" + route_id + "'", Vehicle.class).getResultList();
     }
 
     @GET
@@ -96,21 +98,7 @@ public class QueryService {
             deprecated = false,
             hidden = false)
     public Long getRouteCountById(@PathParam String route_id) {
-        return entityManager.createQuery("select count(*) from ROUTE" + route_id, Long.class).getSingleResult();
-    }
-
-    @GET
-    @Path("/{route_id}/{time}")
-    @Produces(MediaType.APPLICATION_JSON)
-    @Operation(operationId = "getRouteByIdTIme",
-            summary = "get routes by id since time",
-            description = "This operation returns all vehicle movements for route by id since a given time",
-            deprecated = false,
-            hidden = false)
-    public List<Vehicle> getRouteByIdTime(@PathParam String route_id, @PathParam long time) {
-        Date date = new Date(time - 30000); // adjust by minus 30sec
-        log.info("getRouteByIdTime: " + route_id + " " + date.getTime());
-        return entityManager.createQuery("select r from ROUTE" + route_id + " r where lastupdate >= " + date.getTime(), Vehicle.class).getResultList();
+        return entityManager.createQuery("select count(*) from ROUTELATEST r where label = '" + route_id + "'", Long.class).getSingleResult();
     }
 
     @GET
@@ -123,7 +111,7 @@ public class QueryService {
             deprecated = false,
             hidden = false)
     public Publisher<Vehicle> stream(@PathParam String route_id) {
-        Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(3)).onOverflow().drop();
+        Multi<Long> ticks = Multi.createFrom().ticks().every(Duration.ofSeconds(2)).onOverflow().drop();
         return ticks.on().subscribed(subscription -> log.info("We are subscribed!"))
                 .on().cancellation(() -> log.info("Downstream has cancelled the interaction"))
                 .onFailure().invoke(failure -> log.warn("Failed with " + failure.getMessage()))
@@ -134,6 +122,6 @@ public class QueryService {
     }
 
     private Multi<Vehicle> routeMulti(String route_id) {
-        return Multi.createFrom().iterable(getRouteByIdTime(route_id, new Date().getTime())).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
+        return Multi.createFrom().iterable(getRouteById(route_id)).runSubscriptionOn(Infrastructure.getDefaultWorkerPool());
     }
 }
