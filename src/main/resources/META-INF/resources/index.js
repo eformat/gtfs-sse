@@ -246,3 +246,19 @@ function myCancelFunctionSearch() {
     document.getElementById("btnFetchSearch").innerHTML = "Submit"
 }
 
+function loadDropDown() {
+    var host = location.hostname
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function() {
+        if (this.readyState == 4 && this.status == 200) {
+            var obj = JSON.parse(this.response)
+            var html = '<option value="all">ALL</option>';
+            for (var key in obj) {
+                html += '<option value="' + obj[key] + '">' + obj[key] + '</option>';
+            }
+            $("#select_route").append(html);
+        }
+    };
+    xhttp.open("GET", "/query/routes", true);
+    xhttp.send();
+}

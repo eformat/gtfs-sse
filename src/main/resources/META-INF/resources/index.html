@@ -38,20 +38,6 @@
     var w = document.getElementById("btnFetchSearch");
     w.addEventListener("click", myClickFunctionSearch, true);
 
-    var host = location.hostname
-    var routes
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function() {
-        if (this.readyState == 4 && this.status == 200) {
-            var obj = JSON.parse(this.response)
-            var html = '<option value="all">ALL</option>';
-            for (var key in obj) {
-                html += '<option value="' + obj[key] + '">' + obj[key] + '</option>';
-            }
-            $("#select_route").append(html);
-        }
-    };
-    xhttp.open("GET", "/query/routes", true);
-    xhttp.send();
+    loadDropDown();
 </script>
 </html>
