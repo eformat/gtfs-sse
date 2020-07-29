@@ -347,6 +347,8 @@ metadata:
   annotations:
     argocd.argoproj.io/sync-wave: "3"
 spec:
+   config:
+    retention.ms: 1440000 # 1 day
   partitions: 3
   replicas: 2
   topicName: gtfs

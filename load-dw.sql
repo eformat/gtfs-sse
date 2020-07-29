@@ -1,5 +1,5 @@
 CREATE SOURCE gtfs
-FROM KAFKA BROKER 'localhost:9092' TOPIC 'gtfs'
+FROM KAFKA BROKER 'gtfs-sse-cluster-kafka-bootstrap:9092' TOPIC 'gtfs'
 FORMAT TEXT;
 
 CREATE MATERIALIZED VIEW ROUTEALL AS
@@ -9,7 +9,7 @@ CREATE MATERIALIZED VIEW ROUTEALL AS
            CAST((text::JSONB)->'lastUpdate' as float) as lastUpdate,
            CAST((text::JSONB)->'lat' as float) as lat,
            CAST((text::JSONB)->'lon' as float) as lon
-    FROM (SELECT * FROM gtfs);
+    FROM (SELECT * FROM gtfs); -- WHERE CAST((text::JSONB)->'lastUpdate' as float) > 1595907634);
 
 CREATE MATERIALIZED VIEW ALLVID AS
     SELECT r.vid, max(lat) as furthestnorth, min(lat) as furthestsouth, max(lon) as furthesteast, min(lon) as furthestwest, count(*) as count
